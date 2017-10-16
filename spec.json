@@ -1330,6 +1330,15 @@
           },
           {
             "in": "query",
+            "name": "keys",
+            "description": "Specify a list of document IDs.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
             "name": "limit",
             "description": "If this parameter is provided, return only the specified number of documents.",
             "type": "integer"
