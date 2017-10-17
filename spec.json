@@ -941,6 +941,9 @@
             "$ref": "#/parameters/key"
           },
           {
+            "$ref": "#/parameters/keys"
+          },
+          {
             "$ref": "#/parameters/limit"
           },
           {
@@ -1324,6 +1327,15 @@
             "name": "key",
             "description": "If this parameter is provided, return only document that match the specified key.",
             "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "keys",
+            "description": "Specify a list of document IDs.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           {
             "in": "query",
