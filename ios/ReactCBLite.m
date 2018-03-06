@@ -16,6 +16,8 @@
 #import <AssetsLibrary/AssetsLibrary.h>
 #import "ReactCBLiteRequestHandler.h"
 
+NSString *const kReactCBLiteReplicationChangeNotification = @"kReactCBLiteReplicationChangeNotification";
+
 @implementation ReactCBLite
 
 RCT_EXPORT_MODULE()
@@ -56,6 +58,55 @@ RCT_EXPORT_METHOD(initWithAuth:(NSString*)username password:(NSString*)password 
     } @catch (NSException *e) {
         NSLog(@"Failed to start Couchbase lite: %@", e);
         callback(@[[NSNull null], e.reason]);
+    }
+}
+
+RCT_EXPORT_METHOD(createPullReplication:(NSString *)urlString againstDatabase:(NSString *)dbName) {
+    NSError *error = nil;
+    CBLDatabase *database = [manager databaseNamed:dbName error:&error];
+    if (error) {
+        NSLog(@"Error opening database %@. %@", dbName, error);
+        return;
+    }
+    CBLReplication *pullReplication = [database createPullReplication:[NSURL URLWithString:urlString]];
+    pullReplication.continuous = YES;
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(replicationChanged:)
+                                                 name:kCBLReplicationChangeNotification
+                                               object:pullReplication];
+    [pullReplication start];
+}
+
+- (void) replicationChanged:(NSNotification *)notification {
+    CBLReplication *replication = notification.object;
+    switch (replication.status) {
+        case kCBLReplicationStopped: {
+            NSDictionary *userInfo = @{@"status": @"kCBLReplicationStopped"};
+            [[NSNotificationCenter defaultCenter] postNotificationName:kReactCBLiteReplicationChangeNotification
+                                                                object:userInfo];
+            break;
+        }
+        case kCBLReplicationIdle:
+        {
+            NSDictionary *userInfo = @{@"status": @"kCBLReplicationIdle"};
+            [[NSNotificationCenter defaultCenter] postNotificationName:kReactCBLiteReplicationChangeNotification
+                                                                object:userInfo];
+            break;
+        }
+        case kCBLReplicationActive: {
+            NSDictionary *userInfo = @{@"status": @"kCBLReplicationActive"};
+            [[NSNotificationCenter defaultCenter] postNotificationName:kReactCBLiteReplicationChangeNotification
+                                                                object:userInfo];
+            break;
+        }
+        case kCBLReplicationOffline: {
+            NSDictionary *userInfo = @{@"status": @"kCBLReplicationOffline"};
+            [[NSNotificationCenter defaultCenter] postNotificationName:kReactCBLiteReplicationChangeNotification
+                                                                object:userInfo];
+            break;
+        }
+        default:
+            break;
     }
 }
 
@@ -213,6 +264,11 @@ RCT_EXPORT_METHOD(installPrebuiltDatabase:(NSString *) databaseName)
         NSString* dbPath = [[NSBundle mainBundle] pathForResource:databaseName ofType:@"cblite2"];
         [manager replaceDatabaseNamed:databaseName withDatabaseDir:dbPath error:nil];
     }
+}
+
+// In order to access replication notifications a specific thread must be reserved for this module:
+- (dispatch_queue_t) methodQueue {
+    return dispatch_get_main_queue();
 }
 
 @end
