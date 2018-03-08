@@ -105,45 +105,26 @@ RCT_REMAP_METHOD(createPushReplication, createPushReplication:(NSString *)urlStr
 
 - (void) replicationChanged:(NSNotification *)notification {
     CBLReplication *replication = notification.object;
+    NSMutableDictionary *userInfo = [NSMutableDictionary new];
+    userInfo[@"pullReplication"] = @(replication.pull);
     switch (replication.status) {
-        case kCBLReplicationStopped: {
-            NSDictionary *userInfo = @{
-                                       @"status": @"kCBLReplicationStopped",
-                                       @"pullReplication": @(replication.pull)
-                                       };
-            [[NSNotificationCenter defaultCenter] postNotificationName:kReactCBLiteReplicationChangeNotification
-                                                                object:userInfo];
+        case kCBLReplicationStopped:
+            userInfo[@"status"] = @"kCBLReplicationStopped";
             break;
-        }
         case kCBLReplicationIdle:
-        {
-            NSDictionary *userInfo = @{
-                                       @"status": @"kCBLReplicationIdle",
-                                       @"pullReplication": @(replication.pull)
-                                       };
-            [[NSNotificationCenter defaultCenter] postNotificationName:kReactCBLiteReplicationChangeNotification
-                                                                object:userInfo];
+            userInfo[@"status"] = @"kCBLReplicationIdle";
             break;
-        }
-        case kCBLReplicationActive: {
-            NSDictionary *userInfo = @{@"status": @"kCBLReplicationActive",
-                                       @"pullReplication": @(replication.pull)
-                                       };
-            [[NSNotificationCenter defaultCenter] postNotificationName:kReactCBLiteReplicationChangeNotification
-                                                                object:userInfo];
+        case kCBLReplicationActive:
+            userInfo[@"status"] = @"kCBLReplicationActive";
             break;
-        }
-        case kCBLReplicationOffline: {
-            NSDictionary *userInfo = @{@"status": @"kCBLReplicationOffline",
-                                       @"pullReplication": @(replication.pull)
-                                       };
-            [[NSNotificationCenter defaultCenter] postNotificationName:kReactCBLiteReplicationChangeNotification
-                                                                object:userInfo];
+        case kCBLReplicationOffline:
+            userInfo[@"status"] = @"kCBLReplicationOffline";
             break;
-        }
         default:
             break;
     }
+    [[NSNotificationCenter defaultCenter] postNotificationName:kReactCBLiteReplicationChangeNotification
+                                                        object:userInfo];
 }
 
 - (CBLListener*) createListener: (int) port
