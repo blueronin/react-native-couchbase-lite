@@ -61,46 +61,82 @@ RCT_EXPORT_METHOD(initWithAuth:(NSString*)username password:(NSString*)password 
     }
 }
 
-RCT_EXPORT_METHOD(createPullReplication:(NSString *)urlString againstDatabase:(NSString *)dbName) {
+RCT_REMAP_METHOD(createPullReplication, createPullReplication:(NSString *)urlString againstDatabase:(NSString *)dbName withHeaders:(NSDictionary *)headers
+                 resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
     NSError *error = nil;
     CBLDatabase *database = [manager databaseNamed:dbName error:&error];
     if (error) {
         NSLog(@"Error opening database %@. %@", dbName, error);
+        reject(@"Error opening database", [error localizedFailureReason], error);
         return;
     }
     CBLReplication *pullReplication = [database createPullReplication:[NSURL URLWithString:urlString]];
+    pullReplication.headers = headers;
     pullReplication.continuous = YES;
+    
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(replicationChanged:)
                                                  name:kCBLReplicationChangeNotification
                                                object:pullReplication];
     [pullReplication start];
+    resolve(@[]);
+}
+
+RCT_REMAP_METHOD(createPushReplication, createPushReplication:(NSString *)urlString againstDatabase:(NSString *)dbName withHeaders:(NSDictionary *)headers
+                 resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
+    NSError *error = nil;
+    CBLDatabase *database = [manager databaseNamed:dbName error:&error];
+    if (error) {
+        NSLog(@"Error opening database %@. %@", dbName, error);
+        reject(@"Error opening database", [error localizedFailureReason], error);
+        return;
+    }
+    CBLReplication *pushReplication = [database createPushReplication:[NSURL URLWithString:urlString]];
+    pushReplication.headers = headers;
+    pushReplication.continuous = YES;
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(replicationChanged:)
+                                                 name:kCBLReplicationChangeNotification
+                                               object:pushReplication];
+    [pushReplication start];
+    resolve(@[]);
 }
 
 - (void) replicationChanged:(NSNotification *)notification {
     CBLReplication *replication = notification.object;
     switch (replication.status) {
         case kCBLReplicationStopped: {
-            NSDictionary *userInfo = @{@"status": @"kCBLReplicationStopped"};
+            NSDictionary *userInfo = @{
+                                       @"status": @"kCBLReplicationStopped",
+                                       @"pullReplication": @(replication.pull)
+                                       };
             [[NSNotificationCenter defaultCenter] postNotificationName:kReactCBLiteReplicationChangeNotification
                                                                 object:userInfo];
             break;
         }
         case kCBLReplicationIdle:
         {
-            NSDictionary *userInfo = @{@"status": @"kCBLReplicationIdle"};
+            NSDictionary *userInfo = @{
+                                       @"status": @"kCBLReplicationIdle",
+                                       @"pullReplication": @(replication.pull)
+                                       };
             [[NSNotificationCenter defaultCenter] postNotificationName:kReactCBLiteReplicationChangeNotification
                                                                 object:userInfo];
             break;
         }
         case kCBLReplicationActive: {
-            NSDictionary *userInfo = @{@"status": @"kCBLReplicationActive"};
+            NSDictionary *userInfo = @{@"status": @"kCBLReplicationActive",
+                                       @"pullReplication": @(replication.pull)
+                                       };
             [[NSNotificationCenter defaultCenter] postNotificationName:kReactCBLiteReplicationChangeNotification
                                                                 object:userInfo];
             break;
         }
         case kCBLReplicationOffline: {
-            NSDictionary *userInfo = @{@"status": @"kCBLReplicationOffline"};
+            NSDictionary *userInfo = @{@"status": @"kCBLReplicationOffline",
+                                       @"pullReplication": @(replication.pull)
+                                       };
             [[NSNotificationCenter defaultCenter] postNotificationName:kReactCBLiteReplicationChangeNotification
                                                                 object:userInfo];
             break;
