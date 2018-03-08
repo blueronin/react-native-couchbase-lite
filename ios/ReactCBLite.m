@@ -16,6 +16,8 @@
 #import <AssetsLibrary/AssetsLibrary.h>
 #import "ReactCBLiteRequestHandler.h"
 
+NSString *const kReactCBLiteReplicationChangeNotification = @"kReactCBLiteReplicationChangeNotification";
+
 @implementation ReactCBLite
 
 RCT_EXPORT_MODULE()
@@ -57,6 +59,72 @@ RCT_EXPORT_METHOD(initWithAuth:(NSString*)username password:(NSString*)password 
         NSLog(@"Failed to start Couchbase lite: %@", e);
         callback(@[[NSNull null], e.reason]);
     }
+}
+
+RCT_REMAP_METHOD(createPullReplication, createPullReplication:(NSString *)urlString againstDatabase:(NSString *)dbName withHeaders:(NSDictionary *)headers
+                 resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
+    NSError *error = nil;
+    CBLDatabase *database = [manager databaseNamed:dbName error:&error];
+    if (error) {
+        NSLog(@"Error opening database %@. %@", dbName, error);
+        reject(@"Error opening database", [error localizedFailureReason], error);
+        return;
+    }
+    CBLReplication *pullReplication = [database createPullReplication:[NSURL URLWithString:urlString]];
+    pullReplication.headers = headers;
+    pullReplication.continuous = YES;
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(replicationChanged:)
+                                                 name:kCBLReplicationChangeNotification
+                                               object:pullReplication];
+    [pullReplication start];
+    resolve(@[]);
+}
+
+RCT_REMAP_METHOD(createPushReplication, createPushReplication:(NSString *)urlString againstDatabase:(NSString *)dbName withHeaders:(NSDictionary *)headers
+                 resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
+    NSError *error = nil;
+    CBLDatabase *database = [manager databaseNamed:dbName error:&error];
+    if (error) {
+        NSLog(@"Error opening database %@. %@", dbName, error);
+        reject(@"Error opening database", [error localizedFailureReason], error);
+        return;
+    }
+    CBLReplication *pushReplication = [database createPushReplication:[NSURL URLWithString:urlString]];
+    pushReplication.headers = headers;
+    pushReplication.continuous = YES;
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(replicationChanged:)
+                                                 name:kCBLReplicationChangeNotification
+                                               object:pushReplication];
+    [pushReplication start];
+    resolve(@[]);
+}
+
+- (void) replicationChanged:(NSNotification *)notification {
+    CBLReplication *replication = notification.object;
+    NSMutableDictionary *userInfo = [NSMutableDictionary new];
+    userInfo[@"pullReplication"] = @(replication.pull);
+    switch (replication.status) {
+        case kCBLReplicationStopped:
+            userInfo[@"status"] = @"kCBLReplicationStopped";
+            break;
+        case kCBLReplicationIdle:
+            userInfo[@"status"] = @"kCBLReplicationIdle";
+            break;
+        case kCBLReplicationActive:
+            userInfo[@"status"] = @"kCBLReplicationActive";
+            break;
+        case kCBLReplicationOffline:
+            userInfo[@"status"] = @"kCBLReplicationOffline";
+            break;
+        default:
+            break;
+    }
+    [[NSNotificationCenter defaultCenter] postNotificationName:kReactCBLiteReplicationChangeNotification
+                                                        object:userInfo];
 }
 
 - (CBLListener*) createListener: (int) port
@@ -213,6 +281,11 @@ RCT_EXPORT_METHOD(installPrebuiltDatabase:(NSString *) databaseName)
         NSString* dbPath = [[NSBundle mainBundle] pathForResource:databaseName ofType:@"cblite2"];
         [manager replaceDatabaseNamed:databaseName withDatabaseDir:dbPath error:nil];
     }
+}
+
+// In order to access replication notifications a specific thread must be reserved for this module:
+- (dispatch_queue_t) methodQueue {
+    return dispatch_get_main_queue();
 }
 
 @end
