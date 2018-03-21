@@ -154,14 +154,15 @@ RCT_REMAP_METHOD(createPushReplication, createPushReplication:(NSString *)urlStr
 }
 
 // stop and start are needed because the OS appears to kill the listener when the app becomes inactive (when the screen is locked, or its put in the background)
-RCT_EXPORT_METHOD(startListener)
-{
+RCT_REMAP_METHOD(startListener, startListenerWithResolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
     NSLog(@"Starting Couchbase Lite listener process");
     NSError* error;
     if ([listener start:&error]) {
         NSLog(@"Couchbase Lite listening at %@", listener.URL);
+        resolve(@[]);
     } else {
         NSLog(@"Couchbase Lite couldn't start listener at %@: %@", listener.URL, error.localizedDescription);
+        reject([NSString stringWithFormat:@"Error starting listener at URL %@", listener.URL], [error localizedFailureReason], error);
     }
 }
 
