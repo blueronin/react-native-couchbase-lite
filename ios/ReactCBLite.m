@@ -64,19 +64,12 @@ RCT_EXPORT_METHOD(initWithAuth:(NSString*)username password:(NSString*)password 
 /*
  * Index views natively.
  * database: The name of the database
- * route: String representing the view to index, for example 'forms/form_id_xyz'
- * params: Dictionary to be mapped. Only the first key is used, typically { _id: 'form_id_xyz' }
+ * route: String representing the view to index, for example 'projectsTemplates' or 'tasks'
  */
-RCT_EXPORT_METHOD(indexViewInDatabase:(NSString *)database route:(NSString *)route params:(NSDictionary *)params) {
+RCT_EXPORT_METHOD(indexViewInDatabase:(NSString *)database route:(NSString *)route) {
     NSError *error = nil;
     CBLDatabase *db = [manager databaseNamed:database error:&error];
     CBLView *view = [db viewNamed:route];
-    __block NSString *requestedField = [[route componentsSeparatedByString:@"/"] firstObject];
-    __block NSString *requestedKey = [[params allKeys] firstObject];
-    [view setMapBlock:MAPBLOCK(
-                               if([doc.fileType isEqualToString:requestedField]) {
-                                   emit(doc[requestedKey], nil);
-                               }) version:@"1"];
     [view updateIndex];
 }
 
