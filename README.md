@@ -1,5 +1,7 @@
 # react-native-couchbase-lite
 
+**NOTE:** This plugin works for Couchbase Lite 1.x only. For new projects, we recommend to use the [Couchbase Lite 2.0 Native API](https://developer.couchbase.com/documentation/mobile/2.0/couchbase-lite/index.html)  and to write your own wrapper to access Couchbase Lite APIs from a JavaScript codebase (see https://facebook.github.io/react-native/docs/communication-ios.html).
+
 ## Disclaimer
 
 _This package is not an official couchbase plugin and is not supported in any way by couchbase.  If you have issues with it please **do not use
@@ -39,6 +41,8 @@ Couchbase Lite binding for react-native on both iOS and Android. It works by exp
 	Download the Couchbase Lite iOS SDK from [here](http://www.couchbase.com/nosql-databases/downloads#) and drag **CouchbaseLite.framework**, **CouchbaseLiteListener.framework**, **CBLRegisterJSViewCompiler.h**, **libCBLJSViewCompiler.a** in the Xcode project.
 
 	![](http://cl.ly/image/3Z1b0n0W0i3w/sdk.png)
+	
+Make sure these files can be resolved via **Framework Search Paths** in the XCODE projects **Build settings**, either by adding them to one of the mentioned directories or adding a new location in the list.
 
 4. Start React Native.
 
@@ -102,3 +106,8 @@ Couchbase.initRESTClient(manager => {
 ![](https://cl.ly/070z08081W0X/bulk_docs.png)
 
 As you can see, there are two parameters to provide (**db** and **body**). The same exact parameters are documented on the [/{db}}/_bulk_docs](http://developer.couchbase.com/documentation/mobile/current/references/couchbase-lite/rest-api/index.html#!/database/post_db_bulk_docs) endpoint.
+
+## Publishing to npm
+
+1. Bump the version number in **package.json**.
+2. Run `npm publish` locally (it will fail if you don't access rights to publish to npm for this module).
