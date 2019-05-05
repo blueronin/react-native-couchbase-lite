@@ -61,6 +61,21 @@ RCT_EXPORT_METHOD(initWithAuth:(NSString*)username password:(NSString*)password 
     }
 }
 
+/** Indexes view viewName in database databaseName.
+ ** The documentation for couchbase-lite-ios states:
+ ** Indexing scans all documents that have changed since the last time the index was updated.
+ ** The body of each document is passed to the view's map block, and any emitted rows are added
+ ** to the index. Any existing rows previously emitted by those documents, that weren't re-emitted
+ ** this time, are removed. */
+
+RCT_EXPORT_METHOD(indexView:(NSString *)viewName inDatabase:(NSString *)databaseName) {
+    NSError *error = nil;
+    CBLDatabase *db = [manager databaseNamed:databaseName error:&error];
+    NSAssert(error == nil, @"Could not load a valid database named %@.\n%@", databaseName, error);
+    CBLView *view = [db viewNamed:viewName];
+    [view updateIndex];
+}
+
 RCT_REMAP_METHOD(createPullReplication, createPullReplication:(NSString *)urlString againstDatabase:(NSString *)dbName withHeaders:(NSDictionary *)headers
                  resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
     NSError *error = nil;
